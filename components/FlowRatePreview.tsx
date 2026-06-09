@@ -1,49 +1,36 @@
 "use client";
-import { toStroops, calculateFlowRate } from "@/src/lib/sorostream";
-
 
 interface FlowRatePreviewProps {
-  /** USDC amount as a decimal string (e.g. "100"). */
   amount: string;
-  /** Total duration in seconds. */
   durationSeconds: number;
 }
 
-/**
- * Displays per-second, per-hour, per-day, and per-month flow rate
- * breakdown as the user types amount and duration.
- */
 export default function FlowRatePreview({ amount, durationSeconds }: FlowRatePreviewProps) {
-  if (!amount || durationSeconds <= 0) return null;
+  if (!amount || !durationSeconds || durationSeconds === 0) return null;
 
-  let perSecond: bigint;
-  try {
-    const stroops = toStroops(amount);
-    perSecond = calculateFlowRate(stroops, durationSeconds);
-  } catch {
-    return null;
-  }
+  const amountNum = parseFloat(amount);
+  if (isNaN(amountNum) || amountNum <= 0) return null;
 
-  const perHour = perSecond * 3600n;
-  const perDay = perSecond * 86_400n;
-  const perMonth = perSecond * 2_592_000n;
+  const perSecond = amountNum / durationSeconds;
+  const perHour = perSecond * 3600;
+  const perDay = perSecond * 86400;
+  const perMonth = perSecond * 2592000;
+
+  const fmt = (val: number) => val.toFixed(7);
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm">
-      <p className="mb-2 font-medium text-slate-700">Flow Rate</p>
-      <dl className="grid grid-cols-2 gap-x-4 gap-y-1">
-        {[
-          ["Per second", perSecond],
-          ["Per hour", perHour],
-          ["Per day", perDay],
-          ["Per month", perMonth],
-        ].map(([label, val]) => (
-          <div key={label as string} className="contents">
-            <dt className="text-slate-500">{label}</dt>
-            <dd className="font-mono text-slate-800">{formatUSDC(val as bigint)} USDC</dd>
-          </div>
-        ))}
-      </dl>
+    <div className="bg-gray-800 rounded-lg p-4 text-sm space-y-2">
+      <p className="text-gray-400 font-medium">Flow Rate Preview</p>
+      <div className="grid grid-cols-2 gap-2">
+        <span className="text-gray-400">Per second</span>
+        <span className="text-green-400">{fmt(perSecond)} USDC</span>
+        <span className="text-gray-400">Per hour</span>
+        <span className="text-green-400">{fmt(perHour)} USDC</span>
+        <span className="text-gray-400">Per day</span>
+        <span className="text-green-400">{fmt(perDay)} USDC</span>
+        <span className="text-gray-400">Per month</span>
+        <span className="text-green-400">{fmt(perMonth)} USDC</span>
+      </div>
     </div>
   );
 }
