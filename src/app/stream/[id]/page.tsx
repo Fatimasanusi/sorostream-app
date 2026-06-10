@@ -1,6 +1,6 @@
 "use client";
-import StreamTimeline from "../../../components/StreamTimeline";
-import LiveCounter from "../../../components/LiveCounter";
+import StreamTimeline from "@/components/StreamTimeline";
+import LiveCounter from "@/components/LiveCounter";
 
 export default function StreamDetail({ params }: { params: { id: string } }) {
   return (
@@ -12,7 +12,7 @@ export default function StreamDetail({ params }: { params: { id: string } }) {
           <div className="text-center">
             <p className="text-gray-400 text-sm mb-2">Claimable now</p>
             <div className="text-3xl font-bold">
-              <LiveCounter />
+              <LiveCounter flowRate={0} lastWithdrawTime={new Date()} />
             </div>
           </div>
           <div className="flex gap-4">

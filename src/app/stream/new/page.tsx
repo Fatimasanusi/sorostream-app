@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
-import DurationPicker from "../../../components/DurationPicker";
-import FlowRatePreview from "../../../components/FlowRatePreview";
+import DurationPicker from "@/components/DurationPicker";
+import FlowRatePreview from "@/components/FlowRatePreview";
 
 export default function NewStream() {
   const [recipient, setRecipient] = useState('');

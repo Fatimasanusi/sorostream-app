@@ -1,3 +1,14 @@
+export async function getFreighterAdapter() {
+  return {
+    isConnected: async () => {
+      if (typeof window === 'undefined') return false;
+      return !!(window as any).freighter;
+    },
+    getPublicKey,
+    signTransaction,
+  };
+}
+
 export async function connectWallet(): Promise<string> {
   if (typeof window === 'undefined') return '';
   try {
