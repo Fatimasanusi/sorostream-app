@@ -1,24 +1,39 @@
-"use client";
 import StreamTimeline from "@/components/StreamTimeline";
-import LiveCounter from "@/components/LiveCounter";
+import StreamActions from "@/components/StreamActions";
+import { getMockStream } from "@/src/lib/sorostream";
+import Link from "next/link";
 
-export default function StreamDetail({ params }: { params: { id: string } }) {
+export const revalidate = 60;
+
+export default async function StreamDetail({ params }: { params: { id: string } }) {
+  const stream = getMockStream(params.id);
+
+  if (!stream) {
+    return (
+      <main className="min-h-screen bg-gray-900 text-white p-8">
+        <div className="max-w-2xl mx-auto text-center">
+          <h1 className="text-2xl font-bold mb-4">Stream not found</h1>
+          <p className="text-gray-400 mb-6">Stream #{params.id} does not exist or has been removed.</p>
+          <Link href="/dashboard" className="text-green-400 hover:text-green-300">← Back to Dashboard</Link>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-gray-900 text-white p-8">
       <div className="max-w-2xl mx-auto">
-        <h1 className="text-2xl font-bold mb-8">Stream #{params.id}</h1>
+        <div className="mb-4">
+          <Link href="/dashboard" className="text-sm text-gray-400 hover:text-white transition-colors">← Dashboard</Link>
+        </div>
+        <h1 className="text-2xl font-bold mb-2">Stream #{stream.id}</h1>
+        <div className="flex gap-4 text-sm text-gray-400 mb-8">
+          <span>From: <span className="text-white font-mono">{stream.sender}</span></span>
+          <span>To: <span className="text-white font-mono">{stream.recipient}</span></span>
+        </div>
         <div className="bg-gray-800 rounded-xl p-6 space-y-6">
-          <StreamTimeline />
-          <div className="text-center">
-            <p className="text-gray-400 text-sm mb-2">Claimable now</p>
-            <div className="text-3xl font-bold">
-              <LiveCounter flowRate={0} lastWithdrawTime={new Date()} />
-            </div>
-          </div>
-          <div className="flex gap-4">
-            <button className="flex-1 bg-green-600 text-white py-3 rounded-lg font-medium hover:bg-green-700">Withdraw</button>
-            <button className="flex-1 border border-red-600 text-red-400 py-3 rounded-lg font-medium hover:bg-red-900">Cancel</button>
-          </div>
+          <StreamTimeline startTime={stream.startTime} endTime={stream.endTime} />
+          <StreamActions streamId={stream.id} flowRate={stream.flowRate} lastWithdrawTime={stream.lastWithdrawTime} />
         </div>
       </div>
     </main>
