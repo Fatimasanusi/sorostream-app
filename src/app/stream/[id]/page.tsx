@@ -31,7 +31,7 @@ export default function StreamDetail({ params }: { params: { id: string } }) {
   }
 
   return (
-    <main className="min-h-screen bg-gray-900 text-white p-8">
+    <main className="min-h-screen bg-gray-900 text-white p-4 sm:p-8">
       <div className="max-w-2xl mx-auto">
         <div className="mb-4">
           <Link href="/dashboard" className="text-sm text-gray-400 hover:text-white transition-colors">← Dashboard</Link>
@@ -45,7 +45,7 @@ export default function StreamDetail({ params }: { params: { id: string } }) {
           <StreamTimeline />
           <div className="text-center">
             <p className="text-gray-400 text-sm mb-2">Claimable now</p>
-            <div className="text-3xl font-bold">
+            <div className="text-2xl sm:text-3xl font-bold">
               <LiveCounter flowRate={0} lastWithdrawTime={new Date()} />
             </div>
           </div>
@@ -70,6 +70,51 @@ export default function StreamDetail({ params }: { params: { id: string } }) {
               </button>
             </div>
           </div>
+
+          {showTopUp && (
+            <div className="bg-gray-700 rounded-lg p-4 space-y-4" role="dialog" aria-label="Top up stream form">
+              <div>
+                <label htmlFor="topUpAmount" className="text-gray-400 text-sm block mb-2">
+                  Additional Amount (USDC)
+                </label>
+                <input
+                  id="topUpAmount"
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={topUpAmount}
+                  onChange={e => setTopUpAmount(e.target.value)}
+                  placeholder="100"
+                  className="w-full bg-gray-800 border border-gray-600 rounded-lg px-4 py-3 text-white"
+                  aria-required="true"
+                />
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={handleTopUp}
+                  disabled={topUpLoading || !topUpAmount || parseFloat(topUpAmount) <= 0}
+                  className="flex-1 bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  aria-busy={topUpLoading}
+                  aria-label={topUpLoading ? "Submitting top-up, please wait" : "Confirm top-up"}
+                >
+                  {topUpLoading ? "Submitting…" : "Confirm"}
+                </button>
+                <button
+                  onClick={() => { setShowTopUp(false); setTopUpAmount(""); }}
+                  className="flex-1 border border-gray-500 text-gray-300 py-2 rounded-lg font-medium hover:bg-gray-600 transition-colors"
+                  aria-label="Cancel top-up"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
+          {txStatus && (
+            <div className="text-sm text-center text-green-400" role="status" aria-live="polite">
+              {txStatus}
+            </div>
+          )}
         </div>
       </div>
     </main>
