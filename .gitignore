@@ -6,32 +6,24 @@
 # dependencies
 node_modules/
 
-# Next.js
+# Next.js build output
 .next/
 out/
 next-env.d.ts
 
-# test snapshots & coverage
-__snapshots__/
-**/__snapshots__/
-*.snap
+# test artefacts
 coverage/
-.nyc_output/
+__snapshots__/
+*.snap
 
-# build artifacts
-dist/
-build/
-
-# OS / editor
+# editor & OS
 .DS_Store
 Thumbs.db
 .vscode/
 .idea/
 
-# logs
+# misc
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-
-# TypeScript
-*.tsbuildinfo
