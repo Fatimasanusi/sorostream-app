@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
-import { SkeletonCard } from "@/components/Skeleton";
+import { StreamListSkeleton } from "@/components/Skeleton";
 import { getMockStreams, StreamData } from "@/src/lib/sorostream";
 
 type DashboardState = "loading" | "empty" | "ready";
@@ -9,17 +9,27 @@ type DashboardState = "loading" | "empty" | "ready";
 const PAGE_SIZE = 10;
 
 export default function Dashboard() {
+  const rpcFetch = useRpcFetch();
   const [loading, setLoading] = useState(true);
   const [streams, setStreams] = useState<StreamData[]>([]);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setStreams(getMockStreams());
-      setLoading(false);
-    }, 1200);
-    return () => clearTimeout(timer);
+    async function load() {
+      try {
+        const data = await rpcFetch(() =>
+          Promise.resolve(getMockStreams()),
+        );
+        setStreams(data);
+      } catch {
+        // Errors are surfaced via toast by rpcFetch; leave streams empty.
+      } finally {
+        setLoading(false);
+      }
+    }
+    void load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const filtered = useMemo(() => {
@@ -70,16 +80,7 @@ export default function Dashboard() {
         />
 
         {state === "loading" ? (
-          <div
-            className="grid gap-4 md:grid-cols-2"
-            role="status"
-            aria-live="polite"
-            aria-label="Loading streams"
-          >
-            <SkeletonCard />
-            <SkeletonCard />
-            <SkeletonCard />
-          </div>
+          <StreamListSkeleton />
         ) : state === "empty" ? (
           <div className="bg-gray-800 rounded-xl p-8 text-center">
             <p className="text-gray-400 mb-4">No streams found</p>
@@ -89,7 +90,7 @@ export default function Dashboard() {
           </div>
         ) : (
           <>
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-2 transition-opacity duration-300 opacity-100">
               {paged.map((stream) => (
                 <Link key={stream.id} href={`/stream/${stream.id}`} className="block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900">
                   <div className="bg-gray-800 rounded-xl p-5 border border-gray-700 hover:border-green-500 transition-colors">
@@ -110,6 +111,15 @@ export default function Dashboard() {
                       </div>
                     </div>
                   </div>
+                <Link key={stream.id} href={`/stream/${stream.id}`} className="block">
+                  <StreamCard
+                    id={stream.id}
+                    sender={stream.sender}
+                    recipient={stream.recipient}
+                    flowRate={stream.flowRate}
+                    deposit={stream.deposit}
+                    status={stream.status}
+                  />
                 </Link>
               ))}
             </div>

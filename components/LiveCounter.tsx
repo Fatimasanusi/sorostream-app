@@ -3,12 +3,21 @@
 import { useEffect, useState } from "react";
 import FiatDisplay from "@/components/FiatDisplay";
 import { sorostream } from "@/src/lib/sorostream";
+import { useRpcFetch } from "@/src/lib/useRpcFetch";
 
 interface LiveCounterProps {
   flowRate: number;
   lastWithdrawTime: Date;
   streamId?: string;
   reconcileIntervalMs?: number;
+  /**
+   * When provided, the counter shows this value instead of the live-ticking
+   * estimate and renders a visual "pending" indicator to distinguish optimistic
+   * state from confirmed on-chain state.
+   *
+   * Pass `null` to clear the override and resume live ticking.
+   */
+  optimisticOverride?: number | null;
 }
 
 const DEFAULT_RECONCILE_INTERVAL_MS = 30_000;
@@ -18,7 +27,7 @@ function getEstimatedClaimable(flowRate: number, lastWithdrawTime: Date) {
   return Math.max(0, flowRate * elapsed);
 }
 
-function parseClaimable(value: string | number | bigint) {
+function parseClaimable(value: string | number | bigint): number | null {
   const amount = typeof value === "bigint" ? Number(value) : Number(value);
   return Number.isFinite(amount) && amount >= 0 ? amount : null;
 }
@@ -28,22 +37,29 @@ export default function LiveCounter({
   lastWithdrawTime,
   streamId,
   reconcileIntervalMs = DEFAULT_RECONCILE_INTERVAL_MS,
+  optimisticOverride,
 }: LiveCounterProps) {
+  const rpcFetch = useRpcFetch();
+
   const [baseline, setBaseline] = useState(() => ({
     amount: getEstimatedClaimable(flowRate, lastWithdrawTime),
     timestamp: Date.now(),
   }));
-  const [claimable, setClaimable] = useState(() => getEstimatedClaimable(flowRate, lastWithdrawTime));
+  const [claimable, setClaimable] = useState(() =>
+    getEstimatedClaimable(flowRate, lastWithdrawTime)
+  );
 
+  // Reset baseline when props change (e.g. after a withdrawal).
   useEffect(() => {
-    const nextBaseline = {
+    const next = {
       amount: getEstimatedClaimable(flowRate, lastWithdrawTime),
       timestamp: Date.now(),
     };
-    setBaseline(nextBaseline);
-    setClaimable(nextBaseline.amount);
+    setBaseline(next);
+    setClaimable(next.amount);
   }, [flowRate, lastWithdrawTime]);
 
+  // Periodically reconcile against the chain value, with rate-limit handling.
   useEffect(() => {
     let cancelled = false;
 
@@ -51,17 +67,16 @@ export default function LiveCounter({
       if (!streamId) return;
 
       try {
-        const onChainClaimable = parseClaimable(await sorostream.getClaimable(streamId));
+        const onChainClaimable = parseClaimable(
+          await sorostream.getClaimable(streamId)
+        );
         if (cancelled || onChainClaimable === null) return;
 
-        const nextBaseline = {
-          amount: onChainClaimable,
-          timestamp: Date.now(),
-        };
-        setBaseline(nextBaseline);
-        setClaimable(nextBaseline.amount);
+        const next = { amount: onChainClaimable, timestamp: Date.now() };
+        setBaseline(next);
+        setClaimable(next.amount);
       } catch {
-        // Keep the local interpolation running if the chain read is temporarily unavailable.
+        // Keep local interpolation running if the chain read fails permanently.
       }
     }
 
@@ -72,15 +87,24 @@ export default function LiveCounter({
       cancelled = true;
       clearInterval(interval);
     };
-  }, [streamId, reconcileIntervalMs]);
+  }, [streamId, reconcileIntervalMs, rpcFetch]);
 
+  // Interpolate locally at 1-second resolution.
   useEffect(() => {
+    // Stop ticking while an optimistic override is active — the override value
+    // is the source of truth until the transaction resolves.
+    if (optimisticOverride != null) return;
+
     const interval = setInterval(() => {
       const elapsed = (Date.now() - baseline.timestamp) / 1000;
       setClaimable(Math.max(0, baseline.amount + flowRate * elapsed));
-    }, 1000);
+    }, 1_000);
     return () => clearInterval(interval);
-  }, [baseline, flowRate]);
+  }, [baseline, flowRate, optimisticOverride]);
+
+  /** Format stroops as XLM with 7 decimal places. */
+  const formatXlm = (val: number) => (val / 10_000_000).toFixed(7);
+  const xlmAmount = claimable / 10_000_000;
 
   // Locale-aware display: groups thousands, always shows 7 decimal places
   const formatUSDC = (val: number) =>
@@ -91,16 +115,29 @@ export default function LiveCounter({
 
   // Stable format for aria-label so screen readers get a consistent value
   const formatUSDCFixed = (val: number) => (val / 10_000_000).toFixed(7);
+  const isOptimistic = optimisticOverride != null;
+  const displayValue = isOptimistic ? optimisticOverride : claimable;
 
   return (
     <span
-      className="font-mono text-green-600 font-semibold tabular-nums"
+      className="font-mono font-semibold tabular-nums inline-flex items-baseline gap-1.5"
       role="status"
       aria-live="polite"
       aria-label={`Claimable: ${formatUSDCFixed(claimable)} USDC`}
+      aria-label={`Claimable: ${formatUSDC(displayValue)} USDC${isOptimistic ? " (pending confirmation)" : ""}`}
     >
-      {formatUSDC(claimable)} USDC{" "}
-      <FiatDisplay usdcAmount={claimable / 10000000} />
+      <span className={isOptimistic ? "text-yellow-400" : "text-green-600"}>
+        {formatUSDC(displayValue)} USDC
+      </span>
+      {isOptimistic && (
+        <span
+          className="text-xs font-normal text-yellow-400/80 italic"
+          aria-hidden="true"
+        >
+          (pending…)
+        </span>
+      )}
+      {!isOptimistic && <FiatDisplay usdcAmount={displayValue / 10000000} />}
     </span>
   );
 }
