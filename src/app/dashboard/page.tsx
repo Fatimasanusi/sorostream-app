@@ -2,18 +2,17 @@
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { StreamListSkeleton } from "@/components/Skeleton";
+import StreamVirtualList from "@/components/StreamVirtualList";
 import { getMockStreams, StreamData } from "@/src/lib/sorostream";
+import { useRpcFetch } from "@/src/lib/useRpcFetch";
 
 type DashboardState = "loading" | "empty" | "ready";
-
-const PAGE_SIZE = 10;
 
 export default function Dashboard() {
   const rpcFetch = useRpcFetch();
   const [loading, setLoading] = useState(true);
   const [streams, setStreams] = useState<StreamData[]>([]);
   const [search, setSearch] = useState("");
-  const [page, setPage] = useState(0);
 
   useEffect(() => {
     async function load() {
@@ -42,14 +41,6 @@ export default function Dashboard() {
         s.status.toLowerCase().includes(q)
     );
   }, [streams, search]);
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const safePage = Math.min(page, totalPages - 1);
-  const paged = filtered.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE);
-
-  useEffect(() => {
-    setPage(0);
-  }, [search]);
 
   const state: DashboardState = loading
     ? "loading"
@@ -89,44 +80,9 @@ export default function Dashboard() {
             </Link>
           </div>
         ) : (
-          <>
-            <div className="grid gap-4 md:grid-cols-2 transition-opacity duration-300 opacity-100">
-              {paged.map((stream) => (
-                <Link key={stream.id} href={`/stream/${stream.id}`} className="block">
-                  <StreamCard
-                    id={stream.id}
-                    sender={stream.sender}
-                    recipient={stream.recipient}
-                    flowRate={stream.flowRate}
-                    deposit={stream.deposit}
-                    status={stream.status}
-                  />
-                </Link>
-              ))}
-            </div>
-
-            {totalPages > 1 && (
-              <div className="flex items-center justify-between mt-6">
-                <button
-                  disabled={safePage === 0}
-                  onClick={() => setPage((p) => Math.max(0, p - 1))}
-                  className="px-4 py-2 rounded-lg border border-gray-700 text-sm disabled:opacity-50 hover:bg-gray-800 transition-colors"
-                >
-                  Previous
-                </button>
-                <span className="text-sm text-gray-400">
-                  Page {safePage + 1} of {totalPages}
-                </span>
-                <button
-                  disabled={safePage >= totalPages - 1}
-                  onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-                  className="px-4 py-2 rounded-lg border border-gray-700 text-sm disabled:opacity-50 hover:bg-gray-800 transition-colors"
-                >
-                  Next
-                </button>
-              </div>
-            )}
-          </>
+          <div className="rounded-xl border border-gray-700 bg-gray-900 p-2">
+            <StreamVirtualList streams={filtered} />
+          </div>
         )}
       </div>
     </main>
