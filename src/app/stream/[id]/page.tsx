@@ -6,6 +6,7 @@ import LiveCounter from "@/components/LiveCounter";
 import FiatDisplay from "@/components/FiatDisplay";
 import FederationName from "@/components/FederationName";
 import StreamTimeline from "@/components/StreamTimeline";
+import CountdownTimer from "@/components/CountdownTimer";
 import VestingChart from "@/components/VestingChart";
 import StreamHistory from "@/components/StreamHistory";
 import { StreamErrorBoundary } from "@/components/StreamErrorBoundary";
@@ -387,6 +388,8 @@ export default function StreamDetail({ params }: { params: { id: string } }) {
 
         <div className="bg-gray-800 rounded-xl p-6 space-y-6">
           <StreamTimeline startTime={stream.startTime} endTime={stream.endTime} />
+
+          <CountdownTimer endTime={stream.endTime} />
 
           {/* Deposit & flow rate */}
           <div className="grid grid-cols-2 gap-4 text-sm">
