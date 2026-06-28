@@ -1,9 +1,10 @@
 "use client";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import DurationPicker from "@/components/DurationPicker";
 import FlowRatePreview from "@/components/FlowRatePreview";
 import StreamTemplatePicker from "@/components/StreamTemplatePicker";
+import RecipientAutocomplete from "@/components/RecipientAutocomplete";
 import { SkeletonForm } from "@/components/Skeleton";
 import { useTranslations } from "@/src/lib/i18n";
 import { trackEvent } from "@/src/lib/analytics";
@@ -44,6 +45,30 @@ export default function NewStream() {
   const [recipient, setRecipient] = useState("");
   const [amount, setAmount] = useState("");
   const [duration, setDuration] = useState(0);
+  const searchParams = useSearchParams();
+
+  const recipientParam = searchParams.get("recipient");
+  const amountParam = searchParams.get("amount");
+  const durationParam = searchParams.get("duration");
+
+  const initialRecipient =
+    recipientParam && /^G[A-Z2-7]{55}$/.test(recipientParam)
+      ? recipientParam
+      : "";
+  const initialAmount = (() => {
+    if (!amountParam) return "";
+    const num = parseFloat(amountParam);
+    return !isNaN(num) && num > 0 ? amountParam : "";
+  })();
+  const initialDuration = (() => {
+    if (!durationParam) return 0;
+    const num = parseInt(durationParam, 10);
+    return !isNaN(num) && num > 0 ? num : 0;
+  })();
+
+  const [recipient, setRecipient] = useState(initialRecipient);
+  const [amount, setAmount] = useState(initialAmount);
+  const [duration, setDuration] = useState(initialDuration);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({ recipient: "", amount: "", duration: "" });
   const [touched, setTouched] = useState({ recipient: false, amount: false });
@@ -167,6 +192,28 @@ export default function NewStream() {
                 )}
               </div>
             ))}
+        <h1 className="text-xl sm:text-2xl font-bold mb-6 sm:mb-8">{t("title")}</h1>
+        <form onSubmit={handleCreateStream} className="space-y-6">
+          <div>
+            <label htmlFor="recipient" className="text-gray-200 text-sm font-medium block mb-2">
+              {t("recipient_label")}
+            </label>
+            <RecipientAutocomplete
+              value={recipient}
+              onChange={(v) => {
+                setRecipient(v);
+                setErrors((prev) => ({ ...prev, recipient: "" }));
+              }}
+              onBlur={handleRecipientBlur}
+              placeholder={t("recipient_placeholder")}
+              error={errors.recipient}
+              touched={touched.recipient}
+            />
+            {errors.recipient && (
+              <p id="recipient-error" className="text-red-400 text-sm mt-1">
+                {errors.recipient}
+              </p>
+            )}
           </div>
           <h1 className="text-xl sm:text-2xl font-bold text-center">{stepLabels[step].title}</h1>
         </div>
@@ -280,6 +327,19 @@ export default function NewStream() {
                 <FlowRatePreview amount={amount} durationSeconds={duration} />
               </div>
             </div>
+          <StreamTemplatePicker onSelect={handleTemplateSelect} />
+
+          <div>
+            <label className="text-gray-200 text-sm font-medium block mb-2">{t("duration_label")}</label>
+            <DurationPicker
+              key={durationPickerKey}
+              initialSeconds={duration > 0 ? duration : undefined}
+              onChange={(s) => {
+                setDuration(s);
+                if (s > 0) setErrors((prev) => ({ ...prev, duration: "" }));
+              }}
+              error={errors.duration || undefined}
+            />
           </div>
         )}
 
