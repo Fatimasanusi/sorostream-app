@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import NetworkSelector from "@/components/NetworkSelector";
 import WalletConnect from "@/components/WalletConnect";
 import ThemeToggle from "@/components/ThemeToggle";
+import ChangelogModal, { useChangelogUnread } from "@/components/ChangelogModal";
 import NotificationBadge from "@/components/NotificationBadge";
 import { OPEN_ONBOARDING_EVENT } from "@/components/OnboardingWizard";
 import { useNotifications } from "@/src/context/NotificationContext";
@@ -34,6 +35,8 @@ export default function NavHeader() {
   const { address } = useWallet();
   const [xlmBalance, setXlmBalance] = useState<string | null>(null);
   const [balanceLoading, setBalanceLoading] = useState(false);
+  const [changelogOpen, setChangelogOpen] = useState(false);
+  const changelogUnread = useChangelogUnread();
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 10);
@@ -134,6 +137,18 @@ export default function NavHeader() {
             {showUsd ? "USD ✓" : "USD"}
           </button>
           <button
+            onClick={() => setChangelogOpen(true)}
+            className="relative text-gray-400 hover:text-white transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 p-1"
+            aria-label={changelogUnread ? "What's new (unread updates)" : "What's new"}
+            title="What's new"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+              <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+            </svg>
+            {changelogUnread && (
+              <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-green-400 rounded-full" aria-hidden="true" />
+            )}
             onClick={() => window.dispatchEvent(new Event(OPEN_ONBOARDING_EVENT))}
             className="text-xs px-2 py-1 rounded border border-gray-600 text-gray-400 hover:bg-gray-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500"
             title="Open the getting-started guide"
@@ -145,5 +160,6 @@ export default function NavHeader() {
         </div>
       </div>
     </header>
+    <ChangelogModal open={changelogOpen} onClose={() => setChangelogOpen(false)} />
   );
 }
