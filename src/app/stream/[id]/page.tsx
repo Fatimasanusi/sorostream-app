@@ -23,6 +23,9 @@ import {
 } from "@/src/lib/sorostream";
 import { useToast } from "@/src/lib/toast";
 import StreamQrModal from "@/components/StreamQrModal";
+import WithdrawConfirmModal from "@/components/WithdrawConfirmModal";
+import { useSettings } from "@/src/context/SettingsContext";
+import { formatStellarAmount } from "@/src/lib/sorostream";
 import { useKeyboardShortcuts, type ShortcutGroup } from "@/src/lib/useKeyboardShortcuts";
 
 /** Grace period in seconds before a cancel is submitted on-chain. */
@@ -58,6 +61,8 @@ function Spinner() {
 export default function StreamDetail({ params }: { params: { id: string } }) {
   const router = useRouter();
   const { addToast, upsertPersistentToast, removeToast } = useToast();
+  const { withdrawThreshold } = useSettings();
+  const [withdrawConfirmAmount, setWithdrawConfirmAmount] = useState<string | null>(null);
 
   // ── Stream data ────────────────────────────────────────────────────────────
   const [stream, setStream] = useState<StreamData | null>(null);
@@ -134,7 +139,7 @@ export default function StreamDetail({ params }: { params: { id: string } }) {
   }, [params.id]);
 
   // ── Withdraw with optimistic update ───────────────────────────────────────
-  const handleWithdraw = useCallback(async () => {
+  const executeWithdraw = useCallback(async () => {
     const prevStream = getMockStream(params.id);
     const prevClaimable = prevStream ? Number(claimableNow(prevStream)) : 0;
 
@@ -153,6 +158,18 @@ export default function StreamDetail({ params }: { params: { id: string } }) {
       setWithdrawLoading(false);
     }
   }, [params.id, addToast]);
+
+  const handleWithdraw = useCallback(() => {
+    const prevStream = getMockStream(params.id);
+    const claimableStroops = prevStream ? Number(claimableNow(prevStream)) : 0;
+    const claimableXlm = claimableStroops / 10_000_000;
+
+    if (claimableXlm >= withdrawThreshold) {
+      setWithdrawConfirmAmount(formatStellarAmount(claimableStroops));
+    } else {
+      void executeWithdraw();
+    }
+  }, [params.id, withdrawThreshold, executeWithdraw]);
 
   // ── Top-up with optimistic update ─────────────────────────────────────────
   const handleTopUp = useCallback(async () => {
@@ -658,6 +675,14 @@ export default function StreamDetail({ params }: { params: { id: string } }) {
             </div>
           </div>
         </div>
+      )}
+
+      {withdrawConfirmAmount !== null && (
+        <WithdrawConfirmModal
+          amount={withdrawConfirmAmount}
+          onConfirm={() => { setWithdrawConfirmAmount(null); void executeWithdraw(); }}
+          onCancel={() => setWithdrawConfirmAmount(null)}
+        />
       )}
     </main>
   );
