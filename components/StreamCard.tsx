@@ -53,6 +53,7 @@ export default function StreamCard({
             />
           )}
           <span className="text-gray-400 text-xs">Stream #{id}</span>
+          <CopyButton value={id} label="Copy stream ID" />
         </span>
         <span
           className={`text-xs px-2 py-1 rounded-full ${
